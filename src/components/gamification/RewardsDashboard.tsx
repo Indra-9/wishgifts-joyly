@@ -71,7 +71,7 @@ const RewardsDashboard = ({ showConfetti = false }: RewardsDashboardProps) => {
           <span>{karmaPoints} points</span>
           <span>
             {nextTier 
-              ? `${nextTier.minPoints} points for ${nextTier.name}`
+              ? `${nextTier.min_points} points for ${nextTier.name}`
               : `${currentTier?.name || 'Unranked'} (Max Level)`
             }
           </span>

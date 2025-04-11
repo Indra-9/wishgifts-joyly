@@ -158,7 +158,7 @@ const Index = () => {
             </div>
             <div className="flex justify-between mt-1.5 text-xs text-gray-600 dark:text-gray-400">
               <span>{karmaPoints} points</span>
-              <span>{nextTier ? `${nextTier.minPoints} points for ${nextTier.name} tier` : `${currentTier?.name || 'Bronze'} tier`}</span>
+              <span>{nextTier ? `${nextTier.min_points} points for ${nextTier.name} tier` : `${currentTier?.name || 'Bronze'} tier`}</span>
             </div>
           </motion.div>
 

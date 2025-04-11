@@ -6,7 +6,8 @@ import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import RewardsDashboard from '@/components/gamification/RewardsDashboard';
-import { useUserRewards, UserTier } from '@/hooks/useUserRewards';
+import { useUserRewards } from '@/hooks/useUserRewards';
+import { Tier } from '@/types/supabase';
 
 const Rewards = () => {
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ const Rewards = () => {
 };
 
 interface TierCardProps {
-  tier: UserTier;
+  tier: Tier;
   isCurrentTier: boolean;
 }
 
@@ -93,7 +94,7 @@ const TierCard = ({ tier, isCurrentTier }: TierCardProps) => {
           <div>
             <h3 className="font-medium">{tier.name}</h3>
             <p className="text-sm text-gray-500">
-              {tier.minPoints.toLocaleString()} - {tier.maxPoints.toLocaleString()} points
+              {tier.min_points.toLocaleString()} - {tier.max_points.toLocaleString()} points
             </p>
           </div>
         </div>

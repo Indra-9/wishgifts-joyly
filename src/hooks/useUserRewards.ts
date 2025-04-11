@@ -46,19 +46,19 @@ export const useUserRewards = () => {
 
         if (tiersError) throw tiersError;
         
-        setTiers(tiersData);
+        setTiers(tiersData as Tier[]);
         
         // Determine current and next tier based on karma points
-        const current = tiersData.find(
+        const current = (tiersData as Tier[]).find(
           tier => points >= tier.min_points && points <= tier.max_points
         ) || null;
         
         setCurrentTier(current);
         
         if (current) {
-          const currentIndex = tiersData.findIndex(t => t.id === current.id);
-          if (currentIndex < tiersData.length - 1) {
-            setNextTier(tiersData[currentIndex + 1]);
+          const currentIndex = (tiersData as Tier[]).findIndex(t => t.id === current.id);
+          if (currentIndex < (tiersData as Tier[]).length - 1) {
+            setNextTier((tiersData as Tier[])[currentIndex + 1]);
           }
         }
 
@@ -73,12 +73,12 @@ export const useUserRewards = () => {
 
         // Create a map of earned badges for quick lookup
         const earnedBadgesMap = new Map();
-        userBadgesData?.forEach(userBadge => {
+        (userBadgesData as UserBadge[])?.forEach(userBadge => {
           earnedBadgesMap.set(userBadge.badge_id, userBadge.earned_at);
         });
 
         // Combine badges with earned status
-        const combinedBadges = badgesData.map(badge => ({
+        const combinedBadges = (badgesData as Badge[]).map(badge => ({
           ...badge,
           earned: earnedBadgesMap.has(badge.id),
           earnedAt: earnedBadgesMap.get(badge.id) || undefined
@@ -105,7 +105,7 @@ export const useUserRewards = () => {
     // Calculate progress to next tier
     progress: nextTier 
       ? Math.round(((karmaPoints - (currentTier?.min_points || 0)) / 
-         ((nextTier?.minPoints || 1) - (currentTier?.min_points || 0))) * 100)
+         ((nextTier?.min_points || 1) - (currentTier?.min_points || 0))) * 100)
       : 100
   };
 };

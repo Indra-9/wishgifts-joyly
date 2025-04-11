@@ -74,3 +74,64 @@ export interface Profile {
 export interface User extends Profile {
   email: string;
 }
+
+// Add missing interfaces from Supabase tables
+export interface Wishlist {
+  id: string;
+  user_id: string;
+  occasion_id: string | null;
+  is_private: boolean;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+}
+
+export interface WishlistItem {
+  id: string;
+  wishlist_id: string;
+  user_id: string | null;
+  title: string;
+  price: number | null;
+  image_url: string | null;
+  merchant: string | null;
+  product_url: string;
+  notes: string | null;
+  is_purchased: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Occasion {
+  id: string;
+  name: string;
+  icon: string | null;
+  created_at: string;
+}
+
+export interface WishlistAccess {
+  id: string;
+  wishlist_id: string;
+  user_id: string;
+  can_edit: boolean;
+  created_at: string;
+}
+
+export interface Friend {
+  id: string;
+  user_id: string;
+  friend_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GiftPurchase {
+  id: string;
+  item_id: string;
+  buyer_id: string;
+  recipient_id: string;
+  points_earned: number;
+  created_at: string;
+}

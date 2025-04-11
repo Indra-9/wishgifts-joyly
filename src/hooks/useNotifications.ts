@@ -20,6 +20,7 @@ export const useNotifications = () => {
     const fetchNotifications = async () => {
       setLoading(true);
       try {
+        // Type assertion to handle Supabase client types
         const { data, error } = await supabase
           .from('notifications')
           .select('*')
@@ -28,8 +29,9 @@ export const useNotifications = () => {
 
         if (error) throw error;
 
-        setNotifications(data || []);
-        setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+        // Cast data to the correct type
+        setNotifications(data as Notification[] || []);
+        setUnreadCount((data as Notification[])?.filter(n => !n.is_read).length || 0);
       } catch (error) {
         console.error('Error fetching notifications:', error);
       } finally {
@@ -72,6 +74,7 @@ export const useNotifications = () => {
 
   const markAsRead = async (id: string) => {
     try {
+      // Type assertion to handle Supabase client types
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
@@ -92,6 +95,7 @@ export const useNotifications = () => {
     if (notifications.length === 0) return;
     
     try {
+      // Type assertion to handle Supabase client types
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })

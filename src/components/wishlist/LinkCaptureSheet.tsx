@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paperclip, X, ExternalLink, ShoppingBag, AlertTriangle, Check } from 'lucide-react';
@@ -11,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import confetti from 'canvas-confetti';
-import { LinkCache } from '@/types/supabase';
+import { Wishlist } from '@/types/supabase';
+import { getCachedLink, cacheLink, determineMerchant } from '@/utils/linkCache';
 
 interface ProductInfo {
   title: string;
@@ -67,7 +69,7 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setWishlists(data || []);
+      setWishlists(data as Array<{id: string, title: string}> || []);
       if (data && data.length > 0) {
         setSelectedWishlist(data[0].id);
       }
@@ -79,12 +81,6 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
         variant: "destructive",
       });
     }
-  };
-
-  const determineMerchant = (url: string): 'amazon' | 'flipkart' | 'other' => {
-    if (url.includes('amazon')) return 'amazon';
-    if (url.includes('flipkart')) return 'flipkart';
-    return 'other';
   };
 
   const handleFetchInfo = async () => {
@@ -102,13 +98,9 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
 
     try {
       // Check if URL is cached
-      const { data: cachedData, error: cacheError } = await supabase
-        .from('link_cache')
-        .select('*')
-        .eq('url', url)
-        .single();
+      const cachedData = await getCachedLink(url);
       
-      if (!cacheError && cachedData) {
+      if (cachedData) {
         setProductInfo({
           title: cachedData.title || 'Product Title',
           price: cachedData.price || 0,
@@ -116,6 +108,7 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
           merchant: (cachedData.merchant as any) || determineMerchant(url)
         });
         setStep('details');
+        setLoading(false);
         return;
       }
 
@@ -147,32 +140,27 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
         }
         
         // Cache the result
-        supabase
-          .from('link_cache')
-          .insert({
-            url,
-            title: mockData.title,
-            price: mockData.price,
-            image_url: mockData.image_url,
-            merchant: mockData.merchant
-          })
-          .then(({ error }) => {
-            if (error) console.error('Error caching link data:', error);
-          });
+        cacheLink({
+          url,
+          title: mockData.title,
+          price: mockData.price,
+          image_url: mockData.image_url,
+          merchant: mockData.merchant
+        });
         
         setProductInfo(mockData);
         setStep('details');
+        setLoading(false);
       }, 1500);
     } catch (error) {
       console.error('Error fetching product info:', error);
       setScrapingError(true);
+      setLoading(false);
       toast({
         title: "Failed to extract product details",
         description: "We couldn't read the product details from this URL. Please check if it's valid.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -223,6 +211,179 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
     }
   };
 
+  // UI render methods - we could refactor these into separate components
+  const renderLinkInputStep = () => (
+    <motion.div
+      key="step-link"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="mb-4">
+        <Label htmlFor="product-url">Product URL from Amazon or Flipkart</Label>
+        <div className="flex mt-1.5">
+          <Input
+            id="product-url"
+            placeholder="https://www.amazon.in/product-name/..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="flex-1"
+          />
+          <Button 
+            variant="outline"
+            size="icon"
+            className="ml-2"
+            onClick={() => window.open('https://www.amazon.in', '_blank')}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      {scrapingError && (
+        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-start">
+          <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Failed to extract product details</p>
+            <p className="text-sm mt-1">
+              We only support Amazon.in and Flipkart links. Make sure you're copying the full product URL.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <div className="p-4 border rounded-md bg-blue-50 mb-6">
+        <h3 className="text-sm font-medium mb-2 text-blue-700">How to add products:</h3>
+        <ol className="text-xs text-blue-800 space-y-2">
+          <li className="flex items-start">
+            <span className="font-bold mr-1">1.</span>
+            <span>Browse Amazon.in or Flipkart and find a product</span>
+          </li>
+          <li className="flex items-start">
+            <span className="font-bold mr-1">2.</span>
+            <span>Copy the product URL from your browser</span>
+          </li>
+          <li className="flex items-start">
+            <span className="font-bold mr-1">3.</span>
+            <span>Paste it here and click "Fetch Details"</span>
+          </li>
+        </ol>
+      </div>
+      
+      <Button 
+        onClick={handleFetchInfo} 
+        className="w-full"
+        disabled={!url.trim() || loading}
+      >
+        {loading ? (
+          <>
+            <div className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Fetching Details...
+          </>
+        ) : 'Fetch Details'}
+      </Button>
+    </motion.div>
+  );
+
+  const renderProductDetailsStep = () => (
+    productInfo && (
+      <motion.div
+        key="step-details"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="flex mb-6">
+          <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 mr-4">
+            {productInfo.image_url ? (
+              <img 
+                src={productInfo.image_url} 
+                alt={productInfo.title} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ShoppingBag className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-1">
+            <h3 className="font-medium text-sm line-clamp-2">{productInfo.title}</h3>
+            <div className="flex items-center mt-1 mb-2">
+              <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded capitalize">
+                {productInfo.merchant}
+              </span>
+            </div>
+            <p className="text-lg font-semibold">₹{productInfo.price.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4 mb-4">
+          <div>
+            <Label htmlFor="wishlist">Add to Wishlist</Label>
+            <Select value={selectedWishlist} onValueChange={setSelectedWishlist}>
+              <SelectTrigger id="wishlist" className="mt-1.5">
+                <SelectValue placeholder="Select a wishlist" />
+              </SelectTrigger>
+              <SelectContent>
+                {wishlists.length === 0 ? (
+                  <SelectItem value="__empty" disabled>No wishlists found</SelectItem>
+                ) : (
+                  wishlists.map(wishlist => (
+                    <SelectItem key={wishlist.id} value={wishlist.id}>
+                      {wishlist.title}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="notes">Notes (optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Add any specific details, color preference, etc."
+              className="mt-1.5"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            className="flex-1"
+            onClick={() => setStep('link')}
+          >
+            Back
+          </Button>
+          <Button 
+            className="flex-1"
+            disabled={!selectedWishlist || addToWishlistLoading}
+            onClick={handleAddToWishlist}
+          >
+            {addToWishlistLoading ? (
+              <>
+                <div className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Adding...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Add to Wishlist
+              </>
+            )}
+          </Button>
+        </div>
+      </motion.div>
+    )
+  );
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="bottom" className="max-h-[90vh] sm:max-w-md sm:mx-auto rounded-t-xl p-0">
@@ -235,175 +396,8 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
         
         <div className="p-4 overflow-y-auto flex-1">
           <AnimatePresence mode="wait">
-            {step === 'link' && (
-              <motion.div
-                key="step-link"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="mb-4">
-                  <Label htmlFor="product-url">Product URL from Amazon or Flipkart</Label>
-                  <div className="flex mt-1.5">
-                    <Input
-                      id="product-url"
-                      placeholder="https://www.amazon.in/product-name/..."
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button 
-                      variant="outline"
-                      size="icon"
-                      className="ml-2"
-                      onClick={() => window.open('https://www.amazon.in', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {scrapingError && (
-                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-start">
-                    <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Failed to extract product details</p>
-                      <p className="text-sm mt-1">
-                        We only support Amazon.in and Flipkart links. Make sure you're copying the full product URL.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="p-4 border rounded-md bg-blue-50 mb-6">
-                  <h3 className="text-sm font-medium mb-2 text-blue-700">How to add products:</h3>
-                  <ol className="text-xs text-blue-800 space-y-2">
-                    <li className="flex items-start">
-                      <span className="font-bold mr-1">1.</span>
-                      <span>Browse Amazon.in or Flipkart and find a product</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="font-bold mr-1">2.</span>
-                      <span>Copy the product URL from your browser</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="font-bold mr-1">3.</span>
-                      <span>Paste it here and click "Fetch Details"</span>
-                    </li>
-                  </ol>
-                </div>
-                
-                <Button 
-                  onClick={handleFetchInfo} 
-                  className="w-full"
-                  disabled={!url.trim() || loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Fetching Details...
-                    </>
-                  ) : 'Fetch Details'}
-                </Button>
-              </motion.div>
-            )}
-            
-            {step === 'details' && productInfo && (
-              <motion.div
-                key="step-details"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="flex mb-6">
-                  <div className="w-24 h-24 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 mr-4">
-                    {productInfo.image_url ? (
-                      <img 
-                        src={productInfo.image_url} 
-                        alt={productInfo.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="font-medium text-sm line-clamp-2">{productInfo.title}</h3>
-                    <div className="flex items-center mt-1 mb-2">
-                      <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded capitalize">
-                        {productInfo.merchant}
-                      </span>
-                    </div>
-                    <p className="text-lg font-semibold">₹{productInfo.price.toLocaleString('en-IN')}</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <Label htmlFor="wishlist">Add to Wishlist</Label>
-                    <Select value={selectedWishlist} onValueChange={setSelectedWishlist}>
-                      <SelectTrigger id="wishlist" className="mt-1.5">
-                        <SelectValue placeholder="Select a wishlist" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {wishlists.length === 0 ? (
-                          <SelectItem value="__empty" disabled>No wishlists found</SelectItem>
-                        ) : (
-                          wishlists.map(wishlist => (
-                            <SelectItem key={wishlist.id} value={wishlist.id}>
-                              {wishlist.title}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="notes">Notes (optional)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Add any specific details, color preference, etc."
-                      className="mt-1.5"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => setStep('link')}
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    className="flex-1"
-                    disabled={!selectedWishlist || addToWishlistLoading}
-                    onClick={handleAddToWishlist}
-                  >
-                    {addToWishlistLoading ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Add to Wishlist
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            )}
+            {step === 'link' && renderLinkInputStep()}
+            {step === 'details' && renderProductDetailsStep()}
           </AnimatePresence>
         </div>
       </SheetContent>
