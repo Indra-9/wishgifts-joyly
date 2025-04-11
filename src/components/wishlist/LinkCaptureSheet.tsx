@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paperclip, X, ExternalLink, ShoppingBag, AlertTriangle, Check } from 'lucide-react';
@@ -11,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import confetti from 'canvas-confetti';
-import { LinkCacheType } from '@/integrations/supabase/custom-types';
 
 interface ProductInfo {
   title: string;
@@ -150,17 +150,15 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
         }
         
         // Cache the result
-        const cacheEntry = {
-          url,
-          title: mockData.title,
-          price: mockData.price,
-          image_url: mockData.image_url,
-          merchant: mockData.merchant
-        };
-        
         supabase
           .from('link_cache')
-          .insert(cacheEntry)
+          .insert({
+            url,
+            title: mockData.title,
+            price: mockData.price,
+            image_url: mockData.image_url,
+            merchant: mockData.merchant
+          })
           .then(({ error }) => {
             if (error) console.error('Error caching link data:', error);
           });
