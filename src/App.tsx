@@ -17,6 +17,7 @@ import Index from "./pages/Index";
 import Wishlist from "./pages/Wishlist";
 import Friends from "./pages/Friends";
 import Profile from "./pages/Profile";
+import Rewards from "./pages/Rewards";
 import AddItem from "./pages/AddItem";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -62,6 +63,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/rewards" 
+                element={
+                  <ProtectedRoute>
+                    <Rewards />
                   </ProtectedRoute>
                 } 
               />

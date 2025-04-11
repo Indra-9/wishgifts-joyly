@@ -8,6 +8,10 @@ import BottomNav from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserRewards } from '@/hooks/useUserRewards';
+import RewardsDashboard from '@/components/gamification/RewardsDashboard';
+import LinkCaptureSheet from '@/components/wishlist/LinkCaptureSheet';
 
 interface UserProfile {
   id: string;
@@ -23,43 +27,79 @@ interface UserProfile {
   totalFriends: number;
 }
 
-// Mock data - this would come from Supabase in a real implementation
-const mockProfile: UserProfile = {
-  id: '1',
-  name: 'Rohit Sharma',
-  phone: '+91 98765 12345',
-  email: 'rohit@example.com',
-  avatar: 'https://i.pravatar.cc/300?img=70',
-  points: 450,
-  level: 'Silver',
-  nextLevel: 'Gold',
-  progress: 45,
-  totalWishlists: 5,
-  totalFriends: 12
-};
-
 const Profile = () => {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const { currentTier, nextTier, karmaPoints, progress } = useUserRewards();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showLinkSheet, setShowLinkSheet] = useState(false);
 
   useEffect(() => {
-    // Simulating data fetch from Supabase
+    // Fetch profile data
     const fetchData = async () => {
+      if (!user) return;
+      
       setLoading(true);
-      // In a real app, fetch from Supabase here
-      setTimeout(() => {
-        setProfile(mockProfile);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, phone, avatar_url, karma_points')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        
+        // Count wishlists
+        const { count: wishlistCount, error: wishlistError } = await supabase
+          .from('wishlists')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        if (wishlistError) throw wishlistError;
+        
+        // Count friends
+        const { count: friendCount, error: friendError } = await supabase
+          .from('friends')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'accepted');
+        
+        if (friendError) throw friendError;
+        
+        setProfile({
+          id: user.id,
+          name: data.username || user.email?.split('@')[0] || 'User',
+          phone: data.phone || '',
+          email: user.email,
+          avatar: data.avatar_url,
+          points: data.karma_points || 0,
+          level: currentTier?.name || 'Bronze',
+          nextLevel: nextTier?.name || 'Silver',
+          progress: progress,
+          totalWishlists: wishlistCount || 0,
+          totalFriends: friendCount || 0
+        });
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error loading profile",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
 
     fetchData();
-  }, []);
+  }, [user, currentTier, nextTier, progress, toast]);
 
   const copyProfileLink = () => {
-    const link = `https://joyly.app/profile/${profile?.id}`;
+    if (!profile) return;
+    
+    const link = `https://joyly.app/profile/${profile.id}`;
     navigator.clipboard.writeText(link).then(() => {
       setCopied(true);
       toast({
@@ -72,17 +112,18 @@ const Profile = () => {
   };
 
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      await signOut();
       toast({
         title: "Signed out successfully",
         description: "You have been signed out of your account",
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error signing out",
+        description: "Please try again",
+        variant: "destructive",
       });
     }
   };
@@ -144,7 +185,7 @@ const Profile = () => {
               </div>
               
               <h1 className="text-xl font-semibold mb-1">{profile.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">{profile.phone}</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">{profile.phone || profile.email}</p>
               
               <Button 
                 variant="outline" 
@@ -163,33 +204,7 @@ const Profile = () => {
               </Button>
             </motion.div>
             
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="glass rounded-xl p-4 mb-6"
-            >
-              <div className="flex items-center space-x-2 mb-2">
-                <Award className="h-5 w-5 text-amber-500" />
-                <h2 className="text-lg font-medium">Rewards Level</h2>
-              </div>
-              
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                You're <span className="font-medium">{profile.progress}%</span> of the way to {profile.nextLevel}
-              </p>
-              
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-2">
-                <div 
-                  className="bg-gradient-to-r from-amber-400 to-amber-600 h-2.5 rounded-full" 
-                  style={{ width: `${profile.progress}%` }}
-                />
-              </div>
-              
-              <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                <span>{profile.points} points</span>
-                <span>1000 points for {profile.nextLevel}</span>
-              </div>
-            </motion.div>
+            <RewardsDashboard />
             
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -242,6 +257,11 @@ const Profile = () => {
       </main>
       
       <BottomNav />
+      
+      <LinkCaptureSheet 
+        open={showLinkSheet} 
+        onOpenChange={setShowLinkSheet} 
+      />
     </div>
   );
 };

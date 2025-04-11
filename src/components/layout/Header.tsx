@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { Gift, Search, Bell } from 'lucide-react';
+import { Gift, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationsPopover from '@/components/notifications/NotificationsPopover';
 
 const Header = () => {
   const location = useLocation();
@@ -20,10 +21,11 @@ const Header = () => {
     // Set page title based on current route
     const path = location.pathname;
     if (path === '/') setTitle('Joyly');
-    else if (path === '/wishlist') setTitle('My Wishlists');
+    else if (path.includes('/wishlist')) setTitle('Wishlist');
     else if (path === '/friends') setTitle('Friends');
     else if (path === '/profile') setTitle('Profile');
     else if (path === '/add-item') setTitle('Add Item');
+    else if (path === '/rewards') setTitle('Rewards');
     else setTitle('Joyly');
 
     window.addEventListener('scroll', handleScroll);
@@ -49,9 +51,7 @@ const Header = () => {
           <Button variant="ghost" size="icon" className="text-primary rounded-full">
             <Search className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-primary rounded-full">
-            <Bell className="h-5 w-5" />
-          </Button>
+          {user && <NotificationsPopover />}
         </div>
       </div>
     </motion.header>
