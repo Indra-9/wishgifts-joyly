@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      badges: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          points: number
+          requirement: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          points: number
+          requirement: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          points?: number
+          requirement?: string
+        }
+        Relationships: []
+      }
       friends: {
         Row: {
           created_at: string
@@ -71,6 +101,113 @@ export type Database = {
           },
         ]
       }
+      gift_suggestions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          occasion_id: string | null
+          price_range: string | null
+          title: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          occasion_id?: string | null
+          price_range?: string | null
+          title: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          occasion_id?: string | null
+          price_range?: string | null
+          title?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_suggestions_occasion_id_fkey"
+            columns: ["occasion_id"]
+            isOneToOne: false
+            referencedRelation: "occasions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          image_url: string | null
+          merchant: string | null
+          price: number | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+          merchant?: string | null
+          price?: number | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+          merchant?: string | null
+          price?: number | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       occasions: {
         Row: {
           created_at: string
@@ -97,6 +234,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           id: string
+          is_admin: boolean
           karma_points: number
           phone: string | null
           updated_at: string
@@ -106,6 +244,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id: string
+          is_admin?: boolean
           karma_points?: number
           phone?: string | null
           updated_at?: string
@@ -115,12 +254,69 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
+          is_admin?: boolean
           karma_points?: number
           phone?: string | null
           updated_at?: string
           username?: string | null
         }
         Relationships: []
+      }
+      tiers: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          max_points: number
+          min_points: number
+          name: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          max_points: number
+          min_points: number
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          max_points?: number
+          min_points?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wishlist_access: {
         Row: {
@@ -166,6 +362,7 @@ export type Database = {
           product_url: string
           title: string
           updated_at: string
+          user_id: string | null
           wishlist_id: string
         }
         Insert: {
@@ -179,6 +376,7 @@ export type Database = {
           product_url: string
           title: string
           updated_at?: string
+          user_id?: string | null
           wishlist_id: string
         }
         Update: {
@@ -192,6 +390,7 @@ export type Database = {
           product_url?: string
           title?: string
           updated_at?: string
+          user_id?: string | null
           wishlist_id?: string
         }
         Relationships: [

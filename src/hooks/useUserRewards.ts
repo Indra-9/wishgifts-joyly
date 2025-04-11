@@ -2,31 +2,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge, Tier, UserBadge } from '@/types/supabase';
 
-export interface UserBadge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  points: number;
+export interface UserBadgeWithDetails extends Badge {
   earned: boolean;
   earnedAt?: string;
 }
 
-export interface UserTier {
-  id: string;
-  name: string;
-  minPoints: number;
-  maxPoints: number;
-  color: string;
-}
+export { type UserBadge, type Badge, type Tier } from '@/types/supabase';
 
 export const useUserRewards = () => {
   const { user } = useAuth();
-  const [badges, setBadges] = useState<UserBadge[]>([]);
-  const [tiers, setTiers] = useState<UserTier[]>([]);
-  const [currentTier, setCurrentTier] = useState<UserTier | null>(null);
-  const [nextTier, setNextTier] = useState<UserTier | null>(null);
+  const [badges, setBadges] = useState<UserBadgeWithDetails[]>([]);
+  const [tiers, setTiers] = useState<Tier[]>([]);
+  const [currentTier, setCurrentTier] = useState<Tier | null>(null);
+  const [nextTier, setNextTier] = useState<Tier | null>(null);
   const [karmaPoints, setKarmaPoints] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -56,27 +46,19 @@ export const useUserRewards = () => {
 
         if (tiersError) throw tiersError;
         
-        const formattedTiers = tiersData.map(tier => ({
-          id: tier.id,
-          name: tier.name,
-          minPoints: tier.min_points,
-          maxPoints: tier.max_points,
-          color: tier.color
-        }));
-        
-        setTiers(formattedTiers);
+        setTiers(tiersData);
         
         // Determine current and next tier based on karma points
-        const current = formattedTiers.find(
-          tier => points >= tier.minPoints && points <= tier.maxPoints
+        const current = tiersData.find(
+          tier => points >= tier.min_points && points <= tier.max_points
         ) || null;
         
         setCurrentTier(current);
         
         if (current) {
-          const currentIndex = formattedTiers.findIndex(t => t.id === current.id);
-          if (currentIndex < formattedTiers.length - 1) {
-            setNextTier(formattedTiers[currentIndex + 1]);
+          const currentIndex = tiersData.findIndex(t => t.id === current.id);
+          if (currentIndex < tiersData.length - 1) {
+            setNextTier(tiersData[currentIndex + 1]);
           }
         }
 
@@ -97,11 +79,7 @@ export const useUserRewards = () => {
 
         // Combine badges with earned status
         const combinedBadges = badgesData.map(badge => ({
-          id: badge.id,
-          name: badge.name,
-          description: badge.description,
-          icon: badge.icon,
-          points: badge.points,
+          ...badge,
           earned: earnedBadgesMap.has(badge.id),
           earnedAt: earnedBadgesMap.get(badge.id) || undefined
         }));
@@ -126,8 +104,8 @@ export const useUserRewards = () => {
     loading,
     // Calculate progress to next tier
     progress: nextTier 
-      ? Math.round(((karmaPoints - (currentTier?.minPoints || 0)) / 
-         ((nextTier?.minPoints || 1) - (currentTier?.minPoints || 0))) * 100)
+      ? Math.round(((karmaPoints - (currentTier?.min_points || 0)) / 
+         ((nextTier?.minPoints || 1) - (currentTier?.min_points || 0))) * 100)
       : 100
   };
 };

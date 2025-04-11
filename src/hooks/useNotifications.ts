@@ -3,16 +3,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Notification } from '@/types/supabase';
 
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'friend_request' | 'gift_purchased' | 'badge_earned' | 'wishlist_access' | 'system';
-  is_read: boolean;
-  data: any;
-  created_at: string;
-}
+export { type Notification } from '@/types/supabase';
 
 export const useNotifications = () => {
   const { user } = useAuth();

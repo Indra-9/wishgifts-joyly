@@ -6,12 +6,15 @@ import { Gift, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationsPopover from '@/components/notifications/NotificationsPopover';
+import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/types/supabase';
 
 const Header = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [title, setTitle] = useState('Joyly');
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,11 +29,27 @@ const Header = () => {
     else if (path === '/profile') setTitle('Profile');
     else if (path === '/add-item') setTitle('Add Item');
     else if (path === '/rewards') setTitle('Rewards');
+    else if (path.includes('/admin')) setTitle('Admin');
     else setTitle('Joyly');
 
     window.addEventListener('scroll', handleScroll);
+    
+    // Fetch user profile data
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setProfile(data as Profile);
+          }
+        });
+    }
+
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [location]);
+  }, [location, user]);
 
   return (
     <motion.header
@@ -48,6 +67,13 @@ const Header = () => {
           <h1 className="text-xl font-medium">{title}</h1>
         </div>
         <div className="flex items-center space-x-2">
+          {profile?.is_admin && !location.pathname.includes('/admin') && (
+            <Button variant="ghost" size="icon" className="text-primary rounded-full" asChild>
+              <Link to="/admin">
+                <Gift className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="text-primary rounded-full">
             <Search className="h-5 w-5" />
           </Button>

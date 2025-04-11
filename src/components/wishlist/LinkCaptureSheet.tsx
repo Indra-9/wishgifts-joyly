@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paperclip, X, ExternalLink, ShoppingBag, AlertTriangle, Check } from 'lucide-react';
@@ -12,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import confetti from 'canvas-confetti';
+import { LinkCache } from '@/types/supabase';
 
 interface ProductInfo {
   title: string;
@@ -101,13 +101,10 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
     setScrapingError(false);
 
     try {
-      // In a real implementation, you would call an Edge Function to scrape the data
-      // For now, we'll simulate a response based on the URL domain
-      
       // Check if URL is cached
       const { data: cachedData, error: cacheError } = await supabase
         .from('link_cache')
-        .select('title, price, image_url, merchant')
+        .select('*')
         .eq('url', url)
         .single();
       
@@ -116,7 +113,7 @@ const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureShe
           title: cachedData.title || 'Product Title',
           price: cachedData.price || 0,
           image_url: cachedData.image_url || '',
-          merchant: cachedData.merchant as any || determineMerchant(url)
+          merchant: (cachedData.merchant as any) || determineMerchant(url)
         });
         setStep('details');
         return;
