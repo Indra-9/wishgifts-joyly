@@ -22,6 +22,11 @@ import AddItem from "./pages/AddItem";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 
+// Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminRewards from "./pages/admin/AdminRewards";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -82,6 +87,33 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              
+              {/* Admin Routes */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users" 
+                element={
+                  <ProtectedRoute>
+                    <AdminUsers />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/rewards" 
+                element={
+                  <ProtectedRoute>
+                    <AdminRewards />
+                  </ProtectedRoute>
+                } 
+              />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatePresence>

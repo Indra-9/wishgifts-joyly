@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { BadgeType, TierType, UserBadgeType } from '@/integrations/supabase/custom-types';
 
 export interface UserBadge {
   id: string;
@@ -56,7 +57,7 @@ export const useUserRewards = () => {
 
         if (tiersError) throw tiersError;
         
-        const formattedTiers = tiersData.map(tier => ({
+        const formattedTiers = (tiersData as TierType[]).map(tier => ({
           id: tier.id,
           name: tier.name,
           minPoints: tier.min_points,
@@ -91,12 +92,12 @@ export const useUserRewards = () => {
 
         // Create a map of earned badges for quick lookup
         const earnedBadgesMap = new Map();
-        userBadgesData?.forEach(userBadge => {
+        (userBadgesData as UserBadgeType[])?.forEach(userBadge => {
           earnedBadgesMap.set(userBadge.badge_id, userBadge.earned_at);
         });
 
         // Combine badges with earned status
-        const combinedBadges = badgesData.map(badge => ({
+        const combinedBadges = (badgesData as BadgeType[]).map(badge => ({
           id: badge.id,
           name: badge.name,
           description: badge.description,

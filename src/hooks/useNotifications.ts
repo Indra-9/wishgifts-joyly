@@ -3,16 +3,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { NotificationType } from '@/integrations/supabase/custom-types';
 
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'friend_request' | 'gift_purchased' | 'badge_earned' | 'wishlist_access' | 'system';
-  is_read: boolean;
-  data: any;
-  created_at: string;
-}
+export type Notification = NotificationType;
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -35,7 +28,7 @@ export const useNotifications = () => {
 
         if (error) throw error;
 
-        setNotifications(data || []);
+        setNotifications(data as Notification[] || []);
         setUnreadCount(data?.filter(n => !n.is_read).length || 0);
       } catch (error) {
         console.error('Error fetching notifications:', error);
