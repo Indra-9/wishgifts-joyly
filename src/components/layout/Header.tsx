@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { Gift, Search, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [title, setTitle] = useState('Joyly');
 

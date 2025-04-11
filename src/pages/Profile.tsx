@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Gift, Award, Settings, LogOut, ChevronRight, Copy, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   id: string;
@@ -67,6 +69,22 @@ const Profile = () => {
       });
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account",
+      });
+    }
   };
 
   return (
@@ -208,7 +226,12 @@ const Profile = () => {
               />
               
               <div className="mt-6">
-                <Button variant="outline" className="w-full text-destructive" size="lg">
+                <Button 
+                  variant="outline" 
+                  className="w-full text-destructive" 
+                  size="lg"
+                  onClick={handleSignOut}
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
@@ -237,7 +260,7 @@ const ProfileItem = ({
   return (
     <motion.div
       whileHover={{ x: 5, transition: { duration: 0.2 } }}
-      className="flex items-center p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+      className="flex items-center p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 relative"
     >
       <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 mr-3">
         {icon}
@@ -250,23 +273,10 @@ const ProfileItem = ({
       
       <ChevronRight className="h-5 w-5 text-gray-400" />
       
-      <Link to={to} className="absolute inset-0" aria-label={title} />
+      <Link to={to} className="absolute inset-0" aria-label={title}>
+        <span className="sr-only">{title}</span>
+      </Link>
     </motion.div>
-  );
-};
-
-interface LinkProps {
-  to: string;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const Link = ({ to, children, className }: LinkProps) => {
-  // This is a mock Link component, in a real app we'd use react-router-dom's Link
-  return (
-    <a href={to} className={className}>
-      {children}
-    </a>
   );
 };
 
