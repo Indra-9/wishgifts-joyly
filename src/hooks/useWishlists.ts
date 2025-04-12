@@ -28,7 +28,7 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
     setError(null);
     
     try {
-      // Simplified query to avoid RLS recursion issues
+      // Use a direct query without any joins to avoid RLS recursion
       const { data, error } = await supabase
         .from('wishlists')
         .select('id, title')
@@ -45,7 +45,7 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
         return;
       }
       
-      if (!data) {
+      if (!data || data.length === 0) {
         setWishlists([]);
         return;
       }

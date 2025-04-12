@@ -35,6 +35,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showLinkSheet, setShowLinkSheet] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [friendCount, setFriendCount] = useState(0);
 
   useEffect(() => {
     // Fetch profile data
@@ -43,43 +45,55 @@ const Profile = () => {
       
       setLoading(true);
       try {
+        // Fetch profile data without joins to avoid RLS recursion
         const { data, error } = await supabase
           .from('profiles')
           .select('username, phone, avatar_url, karma_points')
           .eq('id', user.id)
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching profile:', error);
+          throw error;
+        }
         
-        // Count wishlists
-        const { count: wishlistCount, error: wishlistError } = await supabase
+        // Simple count query for wishlists
+        const wishlistsResult = await supabase
           .from('wishlists')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id);
         
-        if (wishlistError) throw wishlistError;
+        if (wishlistsResult.error) {
+          console.error('Error counting wishlists:', wishlistsResult.error);
+        } else {
+          setWishlistCount(wishlistsResult.count || 0);
+        }
         
-        // Count friends
-        const { count: friendCount, error: friendError } = await supabase
+        // Simple count query for friends
+        const friendsResult = await supabase
           .from('friends')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .eq('status', 'accepted');
         
-        if (friendError) throw friendError;
+        if (friendsResult.error) {
+          console.error('Error counting friends:', friendsResult.error);
+        } else {
+          setFriendCount(friendsResult.count || 0);
+        }
         
         setProfile({
           id: user.id,
           name: data.username || user.email?.split('@')[0] || 'User',
           phone: data.phone || '',
-          email: user.email,
+          email: user.email || '',
           avatar: data.avatar_url,
           points: data.karma_points || 0,
           level: currentTier?.name || 'Bronze',
           nextLevel: nextTier?.name || 'Silver',
           progress: progress,
-          totalWishlists: wishlistCount || 0,
-          totalFriends: friendCount || 0
+          totalWishlists: wishlistCount,
+          totalFriends: friendCount
         });
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -94,7 +108,45 @@ const Profile = () => {
     };
 
     fetchData();
-  }, [user, currentTier, nextTier, progress, toast]);
+  }, [user, currentTier, nextTier, progress, toast, wishlistCount, friendCount]);
+
+  // Update wishlist and friend counts periodically
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!user) return;
+      
+      try {
+        // Count wishlists
+        const wishlistsResult = await supabase
+          .from('wishlists')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        if (!wishlistsResult.error) {
+          setWishlistCount(wishlistsResult.count || 0);
+        }
+        
+        // Count friends
+        const friendsResult = await supabase
+          .from('friends')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'accepted');
+        
+        if (!friendsResult.error) {
+          setFriendCount(friendsResult.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+      }
+    };
+    
+    fetchCounts();
+    
+    // Refresh counts every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const copyProfileLink = () => {
     if (!profile) return;
