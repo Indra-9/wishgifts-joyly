@@ -13,13 +13,14 @@ interface LinkCaptureSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductAdded?: () => void;
+  preSelectedWishlistId?: string; // Added this property
 }
 
-const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded }: LinkCaptureSheetProps) => {
+const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded, preSelectedWishlistId }: LinkCaptureSheetProps) => {
   const [step, setStep] = useState<'link' | 'details'>('link');
   
   const productLink = useProductLink();
-  const wishlists = useWishlists();
+  const wishlists = useWishlists(preSelectedWishlistId); // Pass the preSelectedWishlistId to useWishlists
   const wishlistItem = useWishlistItem();
 
   // When the sheet opens, reset state and fetch wishlists

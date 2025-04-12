@@ -30,7 +30,7 @@ export const cacheLink = async (linkData: Omit<LinkCache, 'id' | 'created_at' | 
   }
 };
 
-export const determineMerchant = (url: string): 'amazon' | 'flipkart' | 'other' => {
+export const determineMerchant = (url: string): string => {
   if (url.includes('amazon')) return 'amazon';
   if (url.includes('flipkart')) return 'flipkart';
   return 'other';

@@ -8,7 +8,7 @@ export interface ProductCardProps {
   title: string;
   price: number;
   image: string;
-  merchant: 'amazon' | 'flipkart' | 'other';
+  merchant: string; // Changed from 'amazon' | 'flipkart' | 'other' to string to match database values
   url: string;
 }
 
@@ -27,14 +27,14 @@ const ProductCard = ({ id, title, price, image, merchant, url }: ProductCardProp
   };
 
   const getMerchantLogo = (merchant: string) => {
-    switch (merchant) {
-      case 'amazon':
-        return '/amazon-logo.png';
-      case 'flipkart':
-        return '/flipkart-logo.png';
-      default:
-        return null;
+    // Handle merchant as a string, with fallback for non-standard values
+    const normalizedMerchant = merchant.toLowerCase();
+    if (normalizedMerchant.includes('amazon')) {
+      return '/amazon-logo.png';
+    } else if (normalizedMerchant.includes('flipkart')) {
+      return '/flipkart-logo.png';
     }
+    return null;
   };
 
   return (

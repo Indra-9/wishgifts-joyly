@@ -7,7 +7,7 @@ export interface ProductInfo {
   title: string;
   price: number;
   image_url: string;
-  merchant: 'amazon' | 'flipkart' | 'other';
+  merchant: string; // Changed from 'amazon' | 'flipkart' | 'other' to string
 }
 
 export const useProductLink = () => {
@@ -39,7 +39,7 @@ export const useProductLink = () => {
           title: cachedData.title || 'Product Title',
           price: cachedData.price || 0,
           image_url: cachedData.image_url || '',
-          merchant: (cachedData.merchant as any) || determineMerchant(url)
+          merchant: cachedData.merchant || determineMerchant(url)
         });
         setLoading(false);
         return true;
@@ -69,16 +69,13 @@ export const useProductLink = () => {
               merchant: 'flipkart'
             };
           } else {
-            // Simulate error for other merchants
-            setScrapingError(true);
-            setLoading(false);
-            toast({
-              title: "Failed to extract product details",
-              description: "We couldn't read the product details from this URL. Please check if it's valid.",
-              variant: "destructive",
-            });
-            resolve(false);
-            return;
+            // Handle other merchants
+            mockData = {
+              title: 'Other Product - ' + Math.floor(Math.random() * 1000),
+              price: Math.floor(Math.random() * 10000) + 1000,
+              image_url: 'https://via.placeholder.com/300',
+              merchant: 'other'
+            };
           }
           
           // Cache the result
