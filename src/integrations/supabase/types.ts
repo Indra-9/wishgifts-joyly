@@ -66,6 +66,44 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_activities: {
+        Row: {
+          created_at: string | null
+          gifter_id: string | null
+          id: string
+          message: string | null
+          recipient_id: string | null
+          status: string
+          wishlist_item_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          gifter_id?: string | null
+          id?: string
+          message?: string | null
+          recipient_id?: string | null
+          status: string
+          wishlist_item_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          gifter_id?: string | null
+          id?: string
+          message?: string | null
+          recipient_id?: string | null
+          status?: string
+          wishlist_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_activities_wishlist_item_id_fkey"
+            columns: ["wishlist_item_id"]
+            isOneToOne: false
+            referencedRelation: "wishlist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gift_purchases: {
         Row: {
           buyer_id: string
@@ -142,6 +180,33 @@ export type Database = {
           },
         ]
       }
+      karma_events: {
+        Row: {
+          created_at: string | null
+          event: string
+          id: string
+          metadata: Json | null
+          points: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event: string
+          id?: string
+          metadata?: Json | null
+          points: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event?: string
+          id?: string
+          metadata?: Json | null
+          points?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       link_cache: {
         Row: {
           created_at: string
@@ -211,18 +276,21 @@ export type Database = {
       occasions: {
         Row: {
           created_at: string
+          description: string | null
           icon: string | null
           id: string
           name: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           icon?: string | null
           id?: string
           name: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           icon?: string | null
           id?: string
           name?: string
@@ -236,6 +304,7 @@ export type Database = {
           id: string
           is_admin: boolean
           karma_points: number
+          name: string | null
           phone: string | null
           updated_at: string
           username: string | null
@@ -246,6 +315,7 @@ export type Database = {
           id: string
           is_admin?: boolean
           karma_points?: number
+          name?: string | null
           phone?: string | null
           updated_at?: string
           username?: string | null
@@ -256,6 +326,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           karma_points?: number
+          name?: string | null
           phone?: string | null
           updated_at?: string
           username?: string | null
@@ -346,6 +417,73 @@ export type Database = {
             columns: ["wishlist_id"]
             isOneToOne: false
             referencedRelation: "wishlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlist_collaborators: {
+        Row: {
+          accepted: boolean | null
+          id: string
+          invited_at: string | null
+          role: string
+          user_id: string | null
+          wishlist_id: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          id?: string
+          invited_at?: string | null
+          role: string
+          user_id?: string | null
+          wishlist_id?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          id?: string
+          invited_at?: string | null
+          role?: string
+          user_id?: string | null
+          wishlist_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_collaborators_wishlist_id_fkey"
+            columns: ["wishlist_id"]
+            isOneToOne: false
+            referencedRelation: "wishlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlist_item_reactions: {
+        Row: {
+          emoji: string
+          id: string
+          reacted_at: string | null
+          user_id: string | null
+          wishlist_item_id: string | null
+        }
+        Insert: {
+          emoji: string
+          id?: string
+          reacted_at?: string | null
+          user_id?: string | null
+          wishlist_item_id?: string | null
+        }
+        Update: {
+          emoji?: string
+          id?: string
+          reacted_at?: string | null
+          user_id?: string | null
+          wishlist_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_item_reactions_wishlist_item_id_fkey"
+            columns: ["wishlist_item_id"]
+            isOneToOne: false
+            referencedRelation: "wishlist_items"
             referencedColumns: ["id"]
           },
         ]

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Sparkles, Gift } from 'lucide-react';
@@ -29,7 +28,6 @@ const Index = () => {
   const [showLinkSheet, setShowLinkSheet] = useState(false);
 
   useEffect(() => {
-    // Fetch wishlists from Supabase
     const fetchWishlists = async () => {
       if (!user) return;
       
@@ -49,7 +47,6 @@ const Index = () => {
         
         if (error) throw error;
         
-        // For each wishlist, count the number of items
         const wishlistsWithCounts = await Promise.all(
           (data || []).map(async (wishlist) => {
             const { count, error: countError } = await supabase
@@ -82,7 +79,6 @@ const Index = () => {
   }, [user]);
 
   const handleProductAdded = () => {
-    // Refresh wishlists after adding a product
     const fetchWishlists = async () => {
       if (!user) return;
       
@@ -101,7 +97,6 @@ const Index = () => {
         
         if (error) throw error;
         
-        // For each wishlist, count the number of items
         const wishlistsWithCounts = await Promise.all(
           (data || []).map(async (wishlist) => {
             const { count, error: countError } = await supabase
