@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -167,8 +168,8 @@ const Profile = () => {
             >
               <div className="relative mb-4">
                 <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 shadow-md">
-                  {profile.avatar ? (
-                    <img src={profile.avatar} alt={profile.name} className="h-full w-full object-cover" />
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.username || 'User'} className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                       <User className="h-12 w-12 text-gray-400" />
@@ -183,8 +184,8 @@ const Profile = () => {
                 </div>
               </div>
               
-              <h1 className="text-xl font-semibold mb-1">{profile.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">{profile.phone || profile.email}</p>
+              <h1 className="text-xl font-semibold mb-1">{profile.username || 'User'}</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">{profile.phone || user?.email || ''}</p>
               
               <Button 
                 variant="outline" 
