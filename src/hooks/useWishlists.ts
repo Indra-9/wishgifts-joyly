@@ -16,11 +16,14 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
   const [wishlists, setWishlists] = useState<WishlistOption[]>([]);
   const [selectedWishlist, setSelectedWishlist] = useState<string>(preSelectedWishlistId || '');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWishlists = async () => {
     if (!user) return;
     
     setLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from('wishlists')
@@ -28,7 +31,16 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching wishlists:', error);
+        setError(`Failed to load wishlists: ${error.message}`);
+        toast({
+          title: "Error",
+          description: "Failed to load your wishlists",
+          variant: "destructive",
+        });
+        return;
+      }
       
       const wishlistOptions = data as WishlistOption[] || [];
       setWishlists(wishlistOptions);
@@ -38,6 +50,7 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
       }
     } catch (error) {
       console.error('Error fetching wishlists:', error);
+      setError('An unexpected error occurred while loading wishlists');
       toast({
         title: "Error",
         description: "Failed to load your wishlists",
@@ -66,6 +79,7 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
     selectedWishlist,
     setSelectedWishlist,
     loading,
+    error,
     fetchWishlists
   };
 };

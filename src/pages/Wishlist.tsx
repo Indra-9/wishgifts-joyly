@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Share2, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Lock, Share2, MoreHorizontal, Plus, AlertCircle } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import ProductCard, { ProductCardProps } from '@/components/ui/wishlist/ProductCard';
@@ -38,6 +38,7 @@ const Wishlist = () => {
   const [products, setProducts] = useState<ProductCardProps[]>([]);
   const [wishlist, setWishlist] = useState<WishlistDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showLinkSheet, setShowLinkSheet] = useState(false);
 
   useEffect(() => {
@@ -45,6 +46,8 @@ const Wishlist = () => {
 
     const fetchWishlistDetails = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
         // Fetch wishlist details
         const { data: wishlistData, error: wishlistError } = await supabase
@@ -61,6 +64,7 @@ const Wishlist = () => {
 
         if (wishlistError) {
           console.error('Error fetching wishlist:', wishlistError);
+          setError(`Failed to load wishlist: ${wishlistError.message}`);
           toast({
             title: "Error",
             description: "Failed to load wishlist details",
@@ -70,7 +74,7 @@ const Wishlist = () => {
             navigate('/');
             return;
           }
-          throw wishlistError;
+          return;
         }
 
         // Fetch items in the wishlist
@@ -82,12 +86,13 @@ const Wishlist = () => {
 
         if (itemsError) {
           console.error('Error fetching wishlist items:', itemsError);
+          setError(`Failed to load wishlist items: ${itemsError.message}`);
           toast({
             title: "Error",
             description: "Failed to load wishlist items",
             variant: "destructive",
           });
-          throw itemsError;
+          return;
         }
 
         const formattedWishlist: WishlistDetails = {
@@ -111,6 +116,12 @@ const Wishlist = () => {
         setProducts(formattedItems);
       } catch (error) {
         console.error('Error in wishlist loading:', error);
+        setError('An unexpected error occurred while loading the wishlist');
+        toast({
+          title: "Error",
+          description: "Failed to load wishlist",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -154,6 +165,11 @@ const Wishlist = () => {
       setProducts(formattedItems);
     } catch (error) {
       console.error('Error refreshing wishlist items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh wishlist items",
+        variant: "destructive",
+      });
     }
   };
 
@@ -171,11 +187,11 @@ const Wishlist = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-medium truncate">
-              {loading ? 'Loading...' : wishlist?.title}
+              {loading ? 'Loading...' : error ? 'Error' : wishlist?.title}
             </h1>
           </div>
           <div className="flex items-center space-x-2">
-            {!loading && wishlist?.isPrivate && (
+            {!loading && !error && wishlist?.isPrivate && (
               <span className="flex items-center text-amber-600 text-sm mr-1">
                 <Lock className="h-4 w-4 mr-1" />
                 Private
@@ -213,6 +229,17 @@ const Wishlist = () => {
                 </div>
               ))}
             </div>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Error Loading Wishlist</h2>
+            <p className="text-gray-500 mb-6 max-w-xs">
+              {error}
+            </p>
+            <Button onClick={() => navigate('/')}>
+              Go to Home
+            </Button>
           </div>
         ) : (
           <>
