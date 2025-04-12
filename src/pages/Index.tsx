@@ -1,16 +1,20 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Sparkles, Gift } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import WishlistCard, { WishlistCardProps } from '@/components/ui/wishlist/WishlistCard';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import LinkCaptureSheet from '@/components/wishlist/LinkCaptureSheet';
-import { useUserRewards } from '@/hooks/useUserRewards';
 import { useToast } from '@/hooks/use-toast';
+
+// Import our new components
+import RewardsCard from '@/components/home/RewardsCard';
+import WishlistsHeader from '@/components/home/WishlistsHeader';
+import NoWishlists from '@/components/home/NoWishlists';
+import AuthRequired from '@/components/home/AuthRequired';
+import WishlistsLoading from '@/components/home/WishlistsLoading';
 
 const container = {
   hidden: { opacity: 0 },
@@ -24,7 +28,6 @@ const container = {
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { currentTier, karmaPoints, progress, nextTier } = useUserRewards();
   const { toast } = useToast();
   const [wishlists, setWishlists] = useState<WishlistCardProps[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,7 @@ const Index = () => {
       
       setLoading(true);
       try {
+        // Simplified query to avoid RLS recursion issues
         const { data, error } = await supabase
           .from('wishlists')
           .select(`
@@ -48,8 +52,7 @@ const Index = () => {
             thumbnail_url,
             occasions(name)
           `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .eq('user_id', user.id);
         
         if (error) {
           console.error('Error fetching wishlists:', error);
@@ -106,8 +109,8 @@ const Index = () => {
       variant: "default",
     });
     
-    // Fetch updated wishlists
-    const fetchWishlists = async () => {
+    // Simplified function to fetch updated wishlists
+    const refreshWishlists = async () => {
       try {
         const { data, error } = await supabase
           .from('wishlists')
@@ -118,8 +121,7 @@ const Index = () => {
             thumbnail_url,
             occasions(name)
           `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .eq('user_id', user.id);
         
         if (error) throw error;
         
@@ -149,7 +151,7 @@ const Index = () => {
       }
     };
 
-    fetchWishlists();
+    refreshWishlists();
   };
 
   const handleCreateWishlist = () => {
@@ -167,84 +169,18 @@ const Index = () => {
       
       <main className="px-4 py-6 max-w-md mx-auto">
         <div className="mb-6">
-          {!authLoading && user && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="glass rounded-xl p-4 mb-6"
-            >
-              <div className="flex items-center space-x-2 mb-2">
-                <Sparkles className="h-5 w-5 text-amber-500" />
-                <h2 className="text-lg font-medium">My Rewards</h2>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                You've earned {karmaPoints} points on the platform!
-              </p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                <div 
-                  className="bg-gradient-to-r from-amber-400 to-amber-600 h-2.5 rounded-full" 
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-1.5 text-xs text-gray-600 dark:text-gray-400">
-                <span>{karmaPoints} points</span>
-                <span>{nextTier ? `${nextTier.min_points} points for ${nextTier.name} tier` : `${currentTier?.name || 'Bronze'} tier`}</span>
-              </div>
-            </motion.div>
-          )}
+          {!authLoading && user && <RewardsCard />}
 
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">My Wishlists</h2>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-primary"
-              onClick={() => setShowLinkSheet(true)}
-              disabled={!user}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Item
-            </Button>
-          </div>
+          <WishlistsHeader 
+            onAddItem={() => setShowLinkSheet(true)}
+            isUserLoggedIn={!!user}
+          />
           
           {/* Show auth loading state */}
-          {authLoading && (
-            <div className="grid grid-cols-1 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-t-xl" />
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-xl">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2" />
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-4" />
-                    <div className="flex justify-between">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {authLoading && <WishlistsLoading />}
           
           {/* Show data loading state */}
-          {!authLoading && loading && (
-            <div className="grid grid-cols-1 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-t-xl" />
-                  <div className="p-4 border border-gray-200 dark:border-gray-800 border-t-0 rounded-b-xl">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2" />
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-4" />
-                    <div className="flex justify-between">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {!authLoading && loading && <WishlistsLoading />}
           
           {/* Show actual data */}
           {!authLoading && !loading && user && (
@@ -255,14 +191,7 @@ const Index = () => {
               className="grid grid-cols-1 gap-4"
             >
               {wishlists.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <Gift className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No wishlists yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first wishlist to get started</p>
-                  <Button onClick={handleCreateWishlist}>Create a Wishlist</Button>
-                </div>
+                <NoWishlists onCreateWishlist={handleCreateWishlist} />
               ) : (
                 wishlists.map((wishlist) => (
                   <WishlistCard key={wishlist.id} {...wishlist} />
@@ -272,16 +201,7 @@ const Index = () => {
           )}
           
           {/* Show logged out state */}
-          {!authLoading && !user && (
-            <div className="text-center py-12">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Gift className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Please log in</h3>
-              <p className="text-gray-500 mb-6">Sign in to view and manage your wishlists</p>
-              <Button onClick={() => window.location.href = '/auth'}>Sign In</Button>
-            </div>
-          )}
+          {!authLoading && !user && <AuthRequired />}
         </div>
       </main>
       

@@ -25,11 +25,11 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
     setError(null);
     
     try {
+      // Use a simpler query structure to avoid RLS recursion issues
       const { data, error } = await supabase
         .from('wishlists')
         .select('id, title')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
       
       if (error) {
         console.error('Error fetching wishlists:', error);
@@ -45,6 +45,7 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
       const wishlistOptions = data as WishlistOption[] || [];
       setWishlists(wishlistOptions);
       
+      // Only set selectedWishlist if we have a list and no selection yet
       if (wishlistOptions.length > 0 && !selectedWishlist) {
         setSelectedWishlist(wishlistOptions[0].id);
       }
@@ -64,6 +65,10 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
   useEffect(() => {
     if (user) {
       fetchWishlists();
+    } else {
+      // Reset state when user is not available
+      setWishlists([]);
+      setError(null);
     }
   }, [user]);
 
