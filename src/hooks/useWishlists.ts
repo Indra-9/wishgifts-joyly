@@ -10,11 +10,11 @@ export interface WishlistOption {
   title: string;
 }
 
-export const useWishlists = () => {
+export const useWishlists = (preSelectedWishlistId?: string) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [wishlists, setWishlists] = useState<WishlistOption[]>([]);
-  const [selectedWishlist, setSelectedWishlist] = useState<string>('');
+  const [selectedWishlist, setSelectedWishlist] = useState<string>(preSelectedWishlistId || '');
   const [loading, setLoading] = useState(false);
 
   const fetchWishlists = async () => {
@@ -33,7 +33,7 @@ export const useWishlists = () => {
       const wishlistOptions = data as WishlistOption[] || [];
       setWishlists(wishlistOptions);
       
-      if (wishlistOptions.length > 0) {
+      if (wishlistOptions.length > 0 && !selectedWishlist) {
         setSelectedWishlist(wishlistOptions[0].id);
       }
     } catch (error) {
@@ -53,6 +53,13 @@ export const useWishlists = () => {
       fetchWishlists();
     }
   }, [user]);
+
+  // If the preSelectedWishlistId changes (and isn't empty), update the selected wishlist
+  useEffect(() => {
+    if (preSelectedWishlistId) {
+      setSelectedWishlist(preSelectedWishlistId);
+    }
+  }, [preSelectedWishlistId]);
 
   return {
     wishlists,
