@@ -1,7 +1,9 @@
-
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Gift, Award, Settings, LogOut, ChevronRight, Copy, CheckCircle } from 'lucide-react';
+import { 
+  User, Gift, Award, Settings, LogOut, ChevronRight, 
+  Copy, CheckCircle, Users, MessageSquare, Bell 
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
@@ -12,141 +14,86 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserRewards } from '@/hooks/useUserRewards';
 import RewardsDashboard from '@/components/gamification/RewardsDashboard';
 import LinkCaptureSheet from '@/components/wishlist/LinkCaptureSheet';
-
-interface UserProfile {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  avatar?: string;
-  points: number;
-  level: string;
-  nextLevel: string;
-  progress: number;
-  totalWishlists: number;
-  totalFriends: number;
-}
+import { Profile as ProfileType } from '@/types/supabase';
 
 const Profile = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const { currentTier, nextTier, karmaPoints, progress } = useUserRewards();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showLinkSheet, setShowLinkSheet] = useState(false);
+  
   const [wishlistCount, setWishlistCount] = useState(0);
   const [friendCount, setFriendCount] = useState(0);
+  const [pendingFriendRequests, setPendingFriendRequests] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    // Fetch profile data
-    const fetchData = async () => {
+    const fetchProfileData = async () => {
       if (!user) return;
       
       setLoading(true);
       try {
-        // Fetch profile data without joins to avoid RLS recursion
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('username, phone, avatar_url, karma_points')
+          .select('*')
           .eq('id', user.id)
           .single();
         
-        if (error) {
-          console.error('Error fetching profile:', error);
-          throw error;
-        }
-        
-        // Simple count query for wishlists
-        const wishlistsResult = await supabase
+        if (profileError) throw profileError;
+
+        const { count: wishlistsCount, error: wishlistError } = await supabase
           .from('wishlists')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('user_id', user.id);
         
-        if (wishlistsResult.error) {
-          console.error('Error counting wishlists:', wishlistsResult.error);
-        } else {
-          setWishlistCount(wishlistsResult.count || 0);
-        }
-        
-        // Simple count query for friends
-        const friendsResult = await supabase
+        if (wishlistError) throw wishlistError;
+
+        const { count: connectedFriendsCount, error: friendError } = await supabase
           .from('friends')
-          .select('id', { count: 'exact', head: true })
+          .select('id', { count: 'exact' })
           .eq('user_id', user.id)
-          .eq('status', 'accepted');
+          .eq('status', 'connected');
         
-        if (friendsResult.error) {
-          console.error('Error counting friends:', friendsResult.error);
-        } else {
-          setFriendCount(friendsResult.count || 0);
-        }
+        if (friendError) throw friendError;
+
+        const { count: pendingRequestsCount, error: pendingError } = await supabase
+          .from('friends')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+          .eq('status', 'pending_received');
         
-        setProfile({
-          id: user.id,
-          name: data.username || user.email?.split('@')[0] || 'User',
-          phone: data.phone || '',
-          email: user.email || '',
-          avatar: data.avatar_url,
-          points: data.karma_points || 0,
-          level: currentTier?.name || 'Bronze',
-          nextLevel: nextTier?.name || 'Silver',
-          progress: progress,
-          totalWishlists: wishlistCount,
-          totalFriends: friendCount
-        });
+        if (pendingError) throw pendingError;
+
+        const { count: unreadNotificationsCount, error: notificationsError } = await supabase
+          .from('notifications')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+          .eq('is_read', false);
+        
+        if (notificationsError) throw notificationsError;
+
+        setProfile(profileData);
+        setWishlistCount(wishlistsCount ?? 0);
+        setFriendCount(connectedFriendsCount ?? 0);
+        setPendingFriendRequests(pendingRequestsCount ?? 0);
+        setUnreadNotifications(unreadNotificationsCount ?? 0);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching profile data:', error);
         toast({
-          title: "Error loading profile",
-          description: "Please try again later",
-          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile information",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [user, currentTier, nextTier, progress, toast, wishlistCount, friendCount]);
-
-  // Update wishlist and friend counts periodically
-  useEffect(() => {
-    const fetchCounts = async () => {
-      if (!user) return;
-      
-      try {
-        // Count wishlists
-        const wishlistsResult = await supabase
-          .from('wishlists')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        if (!wishlistsResult.error) {
-          setWishlistCount(wishlistsResult.count || 0);
-        }
-        
-        // Count friends
-        const friendsResult = await supabase
-          .from('friends')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'accepted');
-        
-        if (!friendsResult.error) {
-          setFriendCount(friendsResult.count || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching counts:', error);
-      }
-    };
-    
-    fetchCounts();
-    
-    // Refresh counts every 30 seconds
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    fetchProfileData();
+  }, [user, toast]);
 
   const copyProfileLink = () => {
     if (!profile) return;
@@ -267,30 +214,44 @@ const Profile = () => {
               <ProfileItem 
                 icon={<Gift className="h-5 w-5 text-primary" />}
                 title="My Wishlists"
-                subtitle={`${profile.totalWishlists} wishlists created`}
-                to="/"
+                subtitle={`${wishlistCount} wishlists created`}
+                to="/wishlists"
+                badge={wishlistCount > 0}
               />
               
               <ProfileItem 
-                icon={<User className="h-5 w-5 text-primary" />}
+                icon={<Users className="h-5 w-5 text-primary" />}
                 title="Friends"
-                subtitle={`${profile.totalFriends} connected friends`}
+                subtitle={`${friendCount} connected, ${pendingFriendRequests} pending`}
                 to="/friends"
+                badge={pendingFriendRequests > 0}
+                badgeCount={pendingFriendRequests}
+              />
+              
+              <ProfileItem 
+                icon={<Bell className="h-5 w-5 text-primary" />}
+                title="Notifications"
+                subtitle={`${unreadNotifications} unread`}
+                to="/notifications"
+                badge={unreadNotifications > 0}
+                badgeCount={unreadNotifications}
               />
               
               <ProfileItem 
                 icon={<Award className="h-5 w-5 text-primary" />}
                 title="My Rewards"
-                subtitle="View your rewards and gift history"
+                subtitle="View rewards & gift history"
                 to="/rewards"
               />
               
-              <ProfileItem 
-                icon={<Settings className="h-5 w-5 text-primary" />}
-                title="Settings"
-                subtitle="App preferences and account settings"
-                to="/settings"
-              />
+              {profile.is_admin && (
+                <ProfileItem 
+                  icon={<Settings className="h-5 w-5 text-primary" />}
+                  title="Admin Panel"
+                  subtitle="Manage platform & users"
+                  to="/admin"
+                />
+              )}
               
               <div className="mt-6">
                 <Button 
@@ -322,12 +283,16 @@ const ProfileItem = ({
   icon, 
   title, 
   subtitle, 
-  to 
+  to,
+  badge = false,
+  badgeCount
 }: { 
   icon: React.ReactNode; 
   title: string; 
   subtitle: string; 
   to: string;
+  badge?: boolean;
+  badgeCount?: number;
 }) => {
   return (
     <motion.div
@@ -342,6 +307,12 @@ const ProfileItem = ({
         <h3 className="font-medium">{title}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>
       </div>
+      
+      {badge && badgeCount && (
+        <div className="bg-primary text-white text-xs rounded-full px-2 py-1">
+          {badgeCount}
+        </div>
+      )}
       
       <ChevronRight className="h-5 w-5 text-gray-400" />
       
