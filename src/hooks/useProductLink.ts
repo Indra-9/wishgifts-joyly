@@ -7,7 +7,7 @@ export interface ProductInfo {
   title: string;
   price: number;
   image_url: string;
-  merchant: string; // Changed from 'amazon' | 'flipkart' | 'other' to string
+  merchant: string;
 }
 
 export const useProductLink = () => {
@@ -24,7 +24,7 @@ export const useProductLink = () => {
         description: "Please enter a valid product URL",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     setLoading(true);

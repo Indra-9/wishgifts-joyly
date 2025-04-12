@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ProductInfo } from '@/hooks/useProductLink';
 import { WishlistOption } from '@/hooks/useWishlists';
 
-interface ProductDetailsStepProps {
+export interface ProductDetailsStepProps {
   productInfo: ProductInfo;
   wishlists: WishlistOption[];
   selectedWishlist: string;
