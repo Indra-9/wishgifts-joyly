@@ -1,102 +1,154 @@
 
-import { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { Paperclip } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useProductLink } from '@/hooks/useProductLink';
+import React, { useState } from 'react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
 import { useWishlists } from '@/hooks/useWishlists';
-import { useWishlistItem } from '@/hooks/useWishlistItem';
+import { useAuth } from '@/contexts/AuthContext';
+
 import LinkInputStep from './LinkInputStep';
 import ProductDetailsStep from './ProductDetailsStep';
 
-interface LinkCaptureSheetProps {
+export interface LinkCaptureSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProductAdded?: () => void;
-  preSelectedWishlistId?: string; // Added this property
+  preSelectedWishlistId?: string;
 }
 
-const LinkCaptureSheet = ({ open, onOpenChange, onProductAdded, preSelectedWishlistId }: LinkCaptureSheetProps) => {
-  const [step, setStep] = useState<'link' | 'details'>('link');
+const LinkCaptureSheet = ({ 
+  open, 
+  onOpenChange, 
+  onProductAdded,
+  preSelectedWishlistId
+}: LinkCaptureSheetProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState<'link' | 'details'>('link');
+  const [productUrl, setProductUrl] = useState('');
   
-  const productLink = useProductLink();
-  const wishlists = useWishlists(preSelectedWishlistId); // Pass the preSelectedWishlistId to useWishlists
-  const wishlistItem = useWishlistItem();
+  const { 
+    wishlists, 
+    selectedWishlist, 
+    setSelectedWishlist,
+    loading: wishlistsLoading, 
+    error: wishlistsError 
+  } = useWishlists(preSelectedWishlistId);
 
-  // When the sheet opens, reset state and fetch wishlists
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  // Reset state when sheet is closed
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange(newOpen);
+    
+    if (!newOpen) {
       setTimeout(() => {
-        productLink.resetProductInfo();
-        setStep('link');
-        wishlistItem.setNotes('');
-      }, 300); // Reset after animation completes
-    }
-    onOpenChange(open);
-  };
-
-  const handleFetchInfo = async () => {
-    const success = await productLink.fetchProductInfo();
-    if (success) {
-      setStep('details');
+        setCurrentStep('link');
+        setProductUrl('');
+      }, 300); // Delay to allow close animation
     }
   };
 
-  const handleAddToWishlist = async () => {
-    if (!productLink.productInfo) return;
+  const handleProductAdded = () => {
+    // Close the sheet
+    onOpenChange(false);
     
-    const success = await wishlistItem.addItemToWishlist(
-      productLink.url, 
-      productLink.productInfo, 
-      wishlists.selectedWishlist
+    // Trigger callback if provided
+    if (onProductAdded) {
+      onProductAdded();
+    }
+    
+    // Reset for next use
+    setTimeout(() => {
+      setCurrentStep('link');
+      setProductUrl('');
+    }, 300);
+  };
+
+  // Show login message if not authenticated
+  if (!user) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Add to Wishlist</SheetTitle>
+            <SheetDescription>
+              Please log in to add items to your wishlist
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex justify-center mt-8">
+            <Button onClick={() => window.location.href = '/auth'}>
+              Sign In
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     );
-    
-    if (success) {
-      onOpenChange(false);
-      if (onProductAdded) onProductAdded();
-    }
-  };
+  }
+
+  // If no wishlists exist, show create wishlist message
+  if (!wishlistsLoading && wishlists.length === 0 && !wishlistsError) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Add to Wishlist</SheetTitle>
+            <SheetDescription>
+              Create a wishlist first to add items
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex justify-center mt-8">
+            <Button onClick={() => window.location.href = '/create-wishlist'}>
+              Create Wishlist
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="bottom" className="max-h-[90vh] sm:max-w-md sm:mx-auto rounded-t-xl p-0">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center">
-            <Paperclip className="mr-2 h-5 w-5 text-primary" />
-            Add Product to Wishlist
+      <SheetContent className="overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>
+            {currentStep === 'link' ? 'Add to Wishlist' : 'Product Details'}
           </SheetTitle>
+          <SheetDescription>
+            {currentStep === 'link' 
+              ? 'Paste an Amazon or Flipkart product link' 
+              : 'Review the details before adding to your wishlist'}
+          </SheetDescription>
         </SheetHeader>
         
-        <div className="p-4 overflow-y-auto flex-1">
-          <AnimatePresence mode="wait">
-            {step === 'link' && (
-              <LinkInputStep
-                url={productLink.url}
-                onUrlChange={productLink.setUrl}
-                onFetchInfo={handleFetchInfo}
-                loading={productLink.loading}
-                scrapingError={productLink.scrapingError}
-              />
-            )}
-            
-            {step === 'details' && productLink.productInfo && (
-              <ProductDetailsStep
-                productInfo={productLink.productInfo}
-                wishlists={wishlists.wishlists}
-                selectedWishlist={wishlists.selectedWishlist}
-                onWishlistChange={wishlists.setSelectedWishlist}
-                notes={wishlistItem.notes}
-                onNotesChange={wishlistItem.setNotes}
-                onBack={() => setStep('link')}
-                onAddToWishlist={handleAddToWishlist}
-                loading={wishlistItem.addToWishlistLoading}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+        {currentStep === 'link' ? (
+          <LinkInputStep 
+            productUrl={productUrl}
+            setProductUrl={setProductUrl}
+            onNext={() => setCurrentStep('details')}
+          />
+        ) : (
+          <ProductDetailsStep 
+            productUrl={productUrl}
+            wishlists={wishlists}
+            selectedWishlist={selectedWishlist}
+            setSelectedWishlist={setSelectedWishlist}
+            onBack={() => setCurrentStep('link')}
+            onProductAdded={handleProductAdded}
+            wishlistsLoading={wishlistsLoading}
+            wishlistsError={wishlistsError}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
 };
+
+// Missing Button component in the original code
+const Button = ({ children, onClick, className = '' }) => (
+  <button 
+    className={`bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 ${className}`}
+    onClick={onClick}
+  >
+    {children}
+  </button>
+);
 
 export default LinkCaptureSheet;

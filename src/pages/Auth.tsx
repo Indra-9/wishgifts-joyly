@@ -19,20 +19,17 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
-  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) navigate('/');
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) navigate('/');
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/', { replace: true });
+      }
+    };
+    
+    checkSession();
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -57,6 +54,11 @@ const Auth = () => {
         title: "Account created successfully!",
         description: "Please verify your email to complete registration.",
       });
+      
+      // Redirects automatically if auto-confirm is enabled in Supabase
+      if (data.session) {
+        navigate('/', { replace: true });
+      }
       
     } catch (error: any) {
       toast({
@@ -85,7 +87,7 @@ const Auth = () => {
         title: "Signed in successfully",
       });
       
-      navigate('/');
+      navigate('/', { replace: true });
       
     } catch (error: any) {
       toast({

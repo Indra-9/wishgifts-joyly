@@ -19,13 +19,16 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchWishlists = async () => {
-    if (!user) return;
+    if (!user) {
+      setError("User not authenticated");
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
     try {
-      // Use a simpler query structure to avoid RLS recursion issues
+      // Simplified query to avoid RLS recursion issues
       const { data, error } = await supabase
         .from('wishlists')
         .select('id, title')
@@ -42,14 +45,19 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
         return;
       }
       
-      const wishlistOptions = data as WishlistOption[] || [];
+      if (!data) {
+        setWishlists([]);
+        return;
+      }
+      
+      const wishlistOptions = data as WishlistOption[];
       setWishlists(wishlistOptions);
       
-      // Only set selectedWishlist if we have a list and no selection yet
+      // Set selectedWishlist if we have lists but no selection yet
       if (wishlistOptions.length > 0 && !selectedWishlist) {
         setSelectedWishlist(wishlistOptions[0].id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching wishlists:', error);
       setError('An unexpected error occurred while loading wishlists');
       toast({
@@ -66,13 +74,12 @@ export const useWishlists = (preSelectedWishlistId?: string) => {
     if (user) {
       fetchWishlists();
     } else {
-      // Reset state when user is not available
       setWishlists([]);
       setError(null);
     }
   }, [user]);
 
-  // If the preSelectedWishlistId changes (and isn't empty), update the selected wishlist
+  // Update selected wishlist when preSelectedWishlistId changes
   useEffect(() => {
     if (preSelectedWishlistId) {
       setSelectedWishlist(preSelectedWishlistId);
