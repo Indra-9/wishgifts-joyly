@@ -4,6 +4,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useToast } from '@/hooks/use-toast';
 import { useWishlists } from '@/hooks/useWishlists';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProductLink } from '@/hooks/useProductLink';
+import { useWishlistItem } from '@/hooks/useWishlistItem';
+import { Button } from '@/components/ui/button';
 
 import LinkInputStep from './LinkInputStep';
 import ProductDetailsStep from './ProductDetailsStep';
@@ -24,7 +27,24 @@ const LinkCaptureSheet = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<'link' | 'details'>('link');
-  const [productUrl, setProductUrl] = useState('');
+  
+  // Use our hooks to manage state and fetch data
+  const { 
+    url, 
+    setUrl, 
+    productInfo, 
+    loading: productLoading, 
+    scrapingError, 
+    fetchProductInfo, 
+    resetProductInfo 
+  } = useProductLink();
+  
+  const {
+    notes,
+    setNotes,
+    addToWishlistLoading,
+    addItemToWishlist
+  } = useWishlistItem();
   
   const { 
     wishlists, 
@@ -41,25 +61,40 @@ const LinkCaptureSheet = ({
     if (!newOpen) {
       setTimeout(() => {
         setCurrentStep('link');
-        setProductUrl('');
+        resetProductInfo();
+        setNotes('');
       }, 300); // Delay to allow close animation
     }
   };
 
-  const handleProductAdded = () => {
-    // Close the sheet
-    onOpenChange(false);
-    
-    // Trigger callback if provided
-    if (onProductAdded) {
-      onProductAdded();
+  const handleFetchInfo = async () => {
+    const success = await fetchProductInfo();
+    if (success) {
+      setCurrentStep('details');
     }
+  };
+
+  const handleAddToWishlist = async () => {
+    if (!productInfo || !selectedWishlist) return;
     
-    // Reset for next use
-    setTimeout(() => {
-      setCurrentStep('link');
-      setProductUrl('');
-    }, 300);
+    const success = await addItemToWishlist(url, productInfo, selectedWishlist);
+    
+    if (success) {
+      // Close the sheet
+      onOpenChange(false);
+      
+      // Trigger callback if provided
+      if (onProductAdded) {
+        onProductAdded();
+      }
+      
+      // Reset for next use
+      setTimeout(() => {
+        setCurrentStep('link');
+        resetProductInfo();
+        setNotes('');
+      }, 300);
+    }
   };
 
   // Show login message if not authenticated
@@ -120,35 +155,28 @@ const LinkCaptureSheet = ({
         
         {currentStep === 'link' ? (
           <LinkInputStep 
-            productUrl={productUrl}
-            setProductUrl={setProductUrl}
-            onNext={() => setCurrentStep('details')}
+            url={url}
+            onUrlChange={setUrl}
+            onFetchInfo={handleFetchInfo}
+            loading={productLoading}
+            scrapingError={scrapingError}
           />
         ) : (
           <ProductDetailsStep 
-            productUrl={productUrl}
+            productInfo={productInfo!}
             wishlists={wishlists}
             selectedWishlist={selectedWishlist}
-            setSelectedWishlist={setSelectedWishlist}
+            onWishlistChange={setSelectedWishlist}
+            notes={notes}
+            onNotesChange={setNotes}
             onBack={() => setCurrentStep('link')}
-            onProductAdded={handleProductAdded}
-            wishlistsLoading={wishlistsLoading}
-            wishlistsError={wishlistsError}
+            onAddToWishlist={handleAddToWishlist}
+            loading={addToWishlistLoading}
           />
         )}
       </SheetContent>
     </Sheet>
   );
 };
-
-// Missing Button component in the original code
-const Button = ({ children, onClick, className = '' }) => (
-  <button 
-    className={`bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 ${className}`}
-    onClick={onClick}
-  >
-    {children}
-  </button>
-);
 
 export default LinkCaptureSheet;
